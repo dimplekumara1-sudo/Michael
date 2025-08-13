@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Mail, Phone, MapPin, Clock, Send, Camera } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, Send, Camera, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
+import Footer from '../components/Footer';
 
 interface ContactForm {
   name: string;
@@ -13,12 +16,68 @@ interface ContactForm {
 
 const ContactPage = () => {
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ContactForm>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
 
   const onSubmit = async (data: ContactForm) => {
-    console.log('Contact form submitted:', data);
-    // In a real app, you'd send this to your backend
-    alert('Thank you for your message! We\'ll get back to you within 24 hours.');
-    reset();
+    setIsSubmitting(true);
+    setSubmitStatus('idle');
+
+    if (!token) {
+      setSubmitStatus('error');
+      setSubmitMessage('Please verify you are not a robot.');
+      setIsSubmitting(false);
+      return;
+    }
+    
+    try {
+      console.log('📧 Submitting contact form:', data);
+      
+      // Create the message content combining all form data
+      const messageContent = `Event Type: ${data.eventType}
+${data.eventDate ? `Preferred Date: ${data.eventDate}` : ''}
+${data.phone ? `Phone: ${data.phone}` : ''}
+
+Message:
+${data.message}`;
+
+      // Insert into contact_messages table
+      const { error } = await supabase
+        .from('contact_messages')
+        .insert({
+          name: data.name,
+          email: data.email,
+          message: messageContent,
+          status: 'unread'
+        });
+
+      if (error) {
+        console.error('Error submitting contact form:', error);
+        setSubmitStatus('error');
+        setSubmitMessage('Failed to send message. Please try again or contact us directly.');
+      } else {
+        console.log('✅ Contact form submitted successfully');
+        setSubmitStatus('success');
+        setSubmitMessage('Thank you for your message! We\'ll get back to you within 24 hours.');
+        reset();
+        captchaRef.current?.resetCaptcha();
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSubmitStatus('idle');
+          setSubmitMessage('');
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Unexpected error submitting contact form:', error);
+      setSubmitStatus('error');
+      setSubmitMessage('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -45,7 +104,7 @@ const ContactPage = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Phone</h3>
-                    <p className="text-gray-600">+1 (555) 123-4567</p>
+                    <p className="text-gray-600">+91 (960) 305-1089</p>
                     <p className="text-sm text-gray-500">Available Mon-Fri, 9AM-6PM</p>
                   </div>
                 </div>
@@ -67,7 +126,7 @@ const ContactPage = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Studio Location</h3>
-                    <p className="text-gray-600">123 Photography Lane<br />Creative District<br />New York, NY 10001</p>
+                    <p className="text-gray-600">Visakhapatnam<br />Andhra Pradesh<br />India</p>
                   </div>
                 </div>
 
@@ -91,7 +150,7 @@ const ContactPage = () => {
             <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl p-8 text-white">
               <div className="flex items-center space-x-3 mb-4">
                 <Camera className="h-6 w-6" />
-                <h3 className="text-xl font-bold">Why Choose Michael Photography?</h3>
+                <h3 className="text-xl font-bold">Why Choose Micheal photographs?</h3>
               </div>
               <ul className="space-y-3 text-blue-100">
                 <li className="flex items-center space-x-2">
@@ -222,12 +281,48 @@ const ContactPage = () => {
                 )}
               </div>
 
+              <HCaptcha
+                sitekey="4d8e1b5c-3e96-4864-bc70-fc6e34726cce"
+                onVerify={setToken}
+                ref={captchaRef}
+              />
+
+              {/* Status Message */}
+              {submitStatus !== 'idle' && (
+                <div className={`p-4 rounded-lg flex items-center space-x-2 ${
+                  submitStatus === 'success' 
+                    ? 'bg-green-50 text-green-800 border border-green-200' 
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {submitStatus === 'success' ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  )}
+                  <span className="text-sm font-medium">{submitMessage}</span>
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center space-x-2"
+                disabled={isSubmitting}
+                className={`w-full py-4 px-6 rounded-lg transition-colors font-semibold flex items-center justify-center space-x-2 ${
+                  isSubmitting 
+                    ? 'bg-gray-400 text-white cursor-not-allowed' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
-                <Send className="h-5 w-5" />
-                <span>Send Message</span>
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Sending...</span>
+                  </>
+                ) :
+                  <>
+                    <Send className="h-5 w-5" />
+                    <span>Send Message</span>
+                  </>
+                }
               </button>
             </form>
 
@@ -239,6 +334,7 @@ const ContactPage = () => {
           </div>
         </div>
       </div>
+<Footer />
     </div>
   );
 };

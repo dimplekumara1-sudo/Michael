@@ -46,7 +46,7 @@ export const mockBookings: Booking[] = [
     qrCode: 'QR_PORT_003',
     createdAt: '2023-12-20T09:15:00Z',
     userProfile: {
-      name: 'Michael Chen',
+      name: 'Micheal Chen',
       email: 'michael.chen@email.com',
       mobile: '+1-555-0789'
     }
@@ -131,7 +131,7 @@ export const mockContactMessages: ContactMessage[] = [
   },
   {
     id: '2',
-    name: 'Michael Chen',
+    name: 'Micheal Chen',
     email: 'mchen@company.com',
     message: 'We need a photographer for our corporate retreat next month. Looking for someone who can capture both formal presentations and casual team activities.',
     createdAt: '2024-01-11T09:15:00Z',

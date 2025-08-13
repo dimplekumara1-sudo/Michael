@@ -1,23 +1,27 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { Database } from '../lib/database.types';
 
-interface UserProfile {
-  id: string;
-  name: string | null;
-  email: string;
-  mobile?: string | null;
-  role: string;
-  avatar?: string | null;
-  is_active?: boolean | null;
+// Type definitions
+export type UserProfile = Database['public']['Tables']['profiles']['Row'] & {
+  is_active?: boolean; // Optional field for backward compatibility
+};
+
+
+export interface LoginResult {
+  success: boolean;
+  error?: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   register: (email: string, password: string, name: string, mobile?: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<boolean>;
+  createProfileManually: () => Promise<boolean>;
   isLoading: boolean;
   isAdmin: boolean;
 }
@@ -37,131 +41,277 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Helper function to fetch profile from database
-  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  // Optimized loading state setter to prevent unnecessary re-renders
+  const setLoadingWithLog = useCallback((loading: boolean) => {
+    console.log(`🔄 Loading state changing to: ${loading}`);
+    setIsLoading(loading);
+  }, []);
+
+  // Simplified profile loading with retry logic
+  const loadUserProfile = async (userId: string, attempt = 1): Promise<UserProfile | null> => {
     try {
+      console.log(`🔍 Loading profile for userId: ${userId} (attempt ${attempt}/3)`);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return null;
+      if (error || !data) {
+        if (attempt < 3) {
+          console.log(`Profile fetch failed, retrying in 1 second... (attempt ${attempt}/3)`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // wait 1 second
+          return loadUserProfile(userId, attempt + 1);
+        } else {
+          console.warn('Profile fetch failed after 3 attempts');
+          return null;
+        }
       }
 
-      return {
+      console.log('✅ Profile loaded successfully:', data);
+      const profileData: UserProfile = {
         id: data.id,
         name: data.name,
         email: data.email,
         mobile: data.mobile,
         role: data.role,
         avatar: data.avatar,
-        is_active: data.is_active
+        is_active: true, // Default to true since column doesn't exist in actual schema
+        created_at: data.created_at,
+        updated_at: data.updated_at
       };
-    } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      
+      setProfile(profileData);
+      return profileData;
+    } catch (e) {
+      console.error('Unexpected error fetching profile', e);
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return loadUserProfile(userId, attempt + 1);
+      }
       return null;
     }
   };
 
+  // Create profile function
+  const createProfile = async (user: any): Promise<UserProfile | null> => {
+    try {
+      console.log('🔨 Creating profile for user:', user.email);
+      
+      const profileData = {
+        id: user.id,
+        email: user.email!,
+        name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+        mobile: user.user_metadata?.mobile || null,
+        role: user.email === 'admin@photography.com' ? 'admin' : 'user',
+        avatar: null
+      };
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to create profile:', error);
+        return null;
+      }
+
+      console.log('✅ Profile created successfully:', data);
+      const newProfile: UserProfile = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        mobile: data.mobile,
+        role: data.role,
+        avatar: data.avatar,
+        is_active: true, // Default to true since column doesn't exist in actual schema
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+      
+      setProfile(newProfile);
+      return newProfile;
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      return null;
+    }
+  };
+
+  // Initialize auth and handle session changes
   useEffect(() => {
     let mounted = true;
-
+    
     const initializeAuth = async () => {
       try {
-        setIsLoading(true);
+        setLoadingWithLog(true);
+        console.log('🔄 Initializing authentication...');
         
-        // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error);
+          console.error('Session error:', error);
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+            setLoadingWithLog(false);
+          }
+          return;
         }
-        
+
         if (mounted) {
           setUser(session?.user ?? null);
-          if (session?.user) {
-            console.log('Loading profile for user:', session.user.email);
-            const userProfile = await fetchUserProfile(session.user.id);
-            if (userProfile) {
-              setProfile(userProfile);
-              console.log('Profile loaded from database:', userProfile);
-            } else {
-              console.warn('No profile found, creating fallback profile');
-              // Fallback profile if database profile doesn't exist
-              const fallbackProfile: UserProfile = {
-                id: session.user.id,
-                name: session.user.email === 'admin@photography.com' ? 'Michael' : session.user.user_metadata?.name || 'User',
-                email: session.user.email || '',
-                mobile: session.user.user_metadata?.mobile || null,
-                role: session.user.email === 'admin@photography.com' ? 'admin' : 'user',
-                avatar: null,
-                is_active: true
-              };
-              setProfile(fallbackProfile);
-            }
+          
+          if (session?.user?.id) {
+            console.log('✅ Session found for user:', session.user.email);
+            
+            // Set loading to false immediately after setting user
+            // Profile loading will happen in background
+            setLoadingWithLog(false);
+            
+            // Load profile in background without blocking UI
+            loadUserProfile(session.user.id).then(profileData => {
+              if (mounted && profileData) {
+                setProfile(profileData);
+                console.log('✅ Profile loaded in background');
+              } else if (mounted) {
+                // Create fallback profile if no profile found
+                const fallbackProfile: UserProfile = {
+                  id: session.user.id,
+                  name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                  email: session.user.email || '',
+                  mobile: session.user.user_metadata?.mobile || null,
+                  role: session.user.email === 'admin@photography.com' ? 'admin' : 'user',
+                  avatar: null,
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                };
+                setProfile(fallbackProfile);
+                console.log('✅ Fallback profile set');
+              }
+            }).catch(error => {
+              console.error('❌ Background profile loading failed:', error);
+              if (mounted) {
+                // Create fallback profile on error
+                const fallbackProfile: UserProfile = {
+                  id: session.user.id,
+                  name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                  email: session.user.email || '',
+                  mobile: session.user.user_metadata?.mobile || null,
+                  role: session.user.email === 'admin@photography.com' ? 'admin' : 'user',
+                  avatar: null,
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                };
+                setProfile(fallbackProfile);
+                console.log('✅ Fallback profile set after error');
+              }
+            });
           } else {
+            console.log('❌ No active session found');
             setProfile(null);
+            setLoadingWithLog(false);
           }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-      } finally {
         if (mounted) {
-          setIsLoading(false);
+          setUser(null);
+          setProfile(null);
+          setLoadingWithLog(false);
         }
       }
     };
 
     initializeAuth();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        
-        if (mounted) {
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            console.log('Auth change - Loading profile for user:', session.user.email);
-            const userProfile = await fetchUserProfile(session.user.id);
-            if (userProfile) {
-              setProfile(userProfile);
-              console.log('Profile updated from database:', userProfile);
-            } else {
-              // Fallback profile
-              const fallbackProfile: UserProfile = {
-                id: session.user.id,
-                name: session.user.email === 'admin@photography.com' ? 'Michael' : session.user.user_metadata?.name || 'User',
-                email: session.user.email || '',
-                mobile: session.user.user_metadata?.mobile || null,
-                role: session.user.email === 'admin@photography.com' ? 'admin' : 'user',
-                avatar: null,
-                is_active: true
-              };
-              setProfile(fallbackProfile);
-            }
-          } else {
-            setProfile(null);
-          }
-          setIsLoading(false);
-        }
-      }
-    );
-
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
   }, []);
 
+  // Handle auth state changes (but not initial load)
+  useEffect(() => {
+    let isInitialLoad = true;
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.email);
+      
+      // Skip the initial INITIAL_SESSION event to avoid conflicts
+      if (event === 'INITIAL_SESSION' && isInitialLoad) {
+        console.log('⏭️ Skipping initial session event (handled by initialization)');
+        isInitialLoad = false;
+        return;
+      }
+      
+      setUser(session?.user ?? null);
+      
+      if (event === 'SIGNED_IN' && session?.user?.id) {
+        console.log('User signed in, setting loading to false immediately');
+        setLoadingWithLog(false);
+        
+        // Load profile in background without blocking UI
+        loadUserProfile(session.user.id).then(profileData => {
+          if (profileData) {
+            setProfile(profileData);
+            console.log('✅ Profile loaded after sign in');
+          } else {
+            // Create fallback profile
+            const fallbackProfile: UserProfile = {
+              id: session.user.id,
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              email: session.user.email || '',
+              mobile: session.user.user_metadata?.mobile || null,
+              role: session.user.email === 'admin@photography.com' ? 'admin' : 'user',
+              avatar: null,
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            setProfile(fallbackProfile);
+            console.log('✅ Fallback profile set after sign in');
+          }
+        }).catch(error => {
+          console.error('Error fetching profile after sign in:', error);
+          // Create fallback profile on error
+          const fallbackProfile: UserProfile = {
+            id: session.user.id,
+            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            email: session.user.email || '',
+            mobile: session.user.user_metadata?.mobile || null,
+            role: session.user.email === 'admin@photography.com' ? 'admin' : 'user',
+            avatar: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          setProfile(fallbackProfile);
+          console.log('✅ Fallback profile set after sign in error');
+        });
+      } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out, clearing profile...');
+        setProfile(null);
+        setLoadingWithLog(false);
+      }
+      // Remove the else clause that was setting loading to false for other events
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  // Removed the additional useEffect that was causing loading state conflicts
 
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     try {
-      setIsLoading(true);
+      setLoadingWithLog(true);
       console.log('🔐 Attempting login for:', email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -176,25 +326,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           code: error.code
         });
         
-        // Specific error handling
+        // Specific error handling with user-friendly messages
         switch (error.message) {
           case 'Invalid login credentials':
             console.error('Invalid email or password');
-            break;
+            return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' };
           case 'Email not confirmed':
             console.error('Please confirm your email first');
-            break;
+            return { success: false, error: 'Please verify your email address. Check your inbox for a verification email.' };
           default:
             console.error('An unexpected error occurred:', error.message);
+            return { success: false, error: 'An unexpected error occurred. Please try again.' };
         }
-        
-        return false;
       }
 
       // Additional validation
       if (!data.user) {
         console.error('No user returned after login');
-        return false;
+        return { success: false, error: 'Authentication failed. Please try again.' };
       }
 
       console.log('✅ Authentication successful for:', data.user.email);
@@ -217,136 +366,223 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Profile will be automatically set by the auth state change listener
-      return true;
+      // Don't set loading to false here - let the auth state change handler manage it
+      return { success: true };
     } catch (error) {
       console.error('Unexpected login error:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
+      setLoadingWithLog(false);
+      return { success: false, error: 'An unexpected error occurred. Please try again.' };
     }
   };
 
   const register = async (email: string, password: string, name: string, mobile?: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      console.log('🔐 Attempting registration for:', email);
+      setLoadingWithLog(true);
+      console.log('🔐 Starting registration for:', email);
       
-      // Step 1: Register user with Supabase Auth
+      // Direct registration with Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name: name,
-            mobile: mobile || null
+            name,
+            full_name: name,
+            mobile
           }
         }
       });
       
       if (error) {
-        console.error('Registration Error Details:', {
-          message: error.message,
-          status: error.status,
-          code: error.code
-        });
-        
-        // Specific error handling
-        switch (error.message) {
-          case 'User already registered':
-            console.error('Email already exists');
-            break;
-          case 'Password should be at least 6 characters':
-            console.error('Password too short');
-            break;
-          default:
-            console.error('Registration failed:', error.message);
-        }
-        
+        console.error('Registration error:', error);
+        setLoadingWithLog(false);
         return false;
       }
-
+      
       if (!data.user) {
         console.error('No user returned from registration');
+        setLoadingWithLog(false);
         return false;
       }
-
-      console.log('✅ User registered successfully:', data.user.email);
       
-      // Step 2: Create profile in database
-      return await handlePostRegistration(data.user, name, mobile);
+      console.log('✅ Auth user created:', data.user.email);
+      
+      // Try to create profile
+      const profileSuccess = await handlePostRegistration(data.user, name);
+      
+      if (!profileSuccess) {
+        // Create fallback profile for UI
+        const fallbackProfile: UserProfile = {
+          id: data.user.id,
+          name: name || data.user.email?.split('@')[0] || 'User',
+          email: data.user.email || email,
+          mobile: mobile || null,
+          role: email === 'admin@photography.com' ? 'admin' : 'user',
+          avatar: null,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        setProfile(fallbackProfile);
+        console.log('Using fallback profile for UI:', fallbackProfile);
+      }
+      
+      // Set user in context (auth state change will handle the rest)
+      setUser(data.user);
+      setLoadingWithLog(false);
+      return true;
       
     } catch (error) {
       console.error('Unexpected registration error:', error);
+      setLoadingWithLog(false);
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  // Removed complex fetchUserProfile function - using simpler loadUserProfile instead
   // Helper function to handle post-registration profile creation
-  const handlePostRegistration = async (user: any, name: string, mobile?: string): Promise<boolean> => {
+  const handlePostRegistration = async (user: any, name: string): Promise<boolean> => {
     console.log('Creating profile for user ID:', user.id);
     
     try {
-      // Wait a moment for any database triggers to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if profile already exists (created by trigger)
-      let profile = await fetchUserProfile(user.id);
-      
-      if (!profile) {
-        console.log('No existing profile found, creating new profile...');
-        
-        // Create profile data matching your database schema
-        const profileData = {
-          id: user.id,
-          email: user.email!,
-          name: name,
-          mobile: mobile || null,
-          role: user.email === 'admin@photography.com' ? 'admin' : 'user',
-          avatar: null,
-          is_active: true
-        };
-        
-        console.log('Inserting profile data:', profileData);
-        
-        const { data: insertData, error: profileError } = await supabase
-          .from('profiles')
-          .insert(profileData)
-          .select()
-          .single();
-        
-        if (profileError) {
-          console.error('Profile creation failed:', {
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint,
-            code: profileError.code
-          });
-          
-          // Don't fail registration if profile creation fails
-          // User can still login and profile can be created later
-          console.warn('Profile creation failed but registration succeeded');
-        } else {
-          console.log('✅ Profile created successfully:', insertData);
-        }
-      } else {
-        console.log('✅ Profile already exists:', profile);
+      // Check if profile already exists using our loadUserProfile function
+      const existingProfile = await loadUserProfile(user.id);
+      if (existingProfile) {
+        console.log('✅ Profile already exists:', existingProfile);
+        setProfile(existingProfile);
+        return true;
       }
+      
+      // Create profile manually
+      const profileData = {
+        id: user.id,
+        email: user.email!,
+        name: name || 'User',
+        role: user.email === 'admin@photography.com' ? 'admin' : 'user',
+        mobile: user.user_metadata?.mobile || null,
+        avatar: null
+      };
+      
+      const { data: newProfile, error: profileError } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select()
+        .single();
+      
+      if (profileError) {
+        console.error('Profile creation failed:', profileError);
+        return false;
+      }
+      
+      console.log('✅ Profile created successfully:', newProfile);
+      setProfile(newProfile);
+      return true;
       
     } catch (profileError) {
       console.error('Profile creation error:', profileError);
-      // Don't fail registration if profile creation fails
+      return false;
     }
-    
-    console.log('📧 Registration completed successfully');
-    return true;
+  };
+
+  // Manual profile creation function for emergency cases
+  const createProfileManually = async (): Promise<boolean> => {
+    try {
+      if (!user) {
+        console.error('No user available for manual profile creation');
+        return false;
+      }
+
+      console.log('🚨 Manually creating profile for user:', user.email);
+
+      // Call the database function to create missing profile
+      const { data, error } = await supabase.rpc('create_missing_profile', {
+        user_id: user.id,
+        user_email: user.email!,
+        user_name: user.user_metadata?.name || user.email?.split('@')[0] || 'User'
+      });
+
+      if (error) {
+        console.error('Manual profile creation failed:', error);
+        return false;
+      }
+
+      if (data) {
+        const newProfile: UserProfile = {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          mobile: data.mobile,
+          role: data.role,
+          avatar: data.avatar,
+          is_active: true, // Default to true since column doesn't exist in actual schema
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        };
+        
+        setProfile(newProfile);
+        console.log('✅ Manual profile creation successful:', newProfile);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Manual profile creation error:', error);
+      return false;
+    }
+  };
+
+  const updateProfile = async (updates: Partial<UserProfile>): Promise<boolean> => {
+    try {
+      if (!user || !profile) {
+        console.error('No user or profile to update');
+        return false;
+      }
+
+      console.log('🔄 Updating profile with:', updates);
+
+      // Update the profile in the database
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Profile update failed:', error);
+        return false;
+      }
+
+      if (data) {
+        // Update the local profile state
+        const updatedProfile: UserProfile = {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          mobile: data.mobile,
+          role: data.role,
+          avatar: data.avatar,
+          is_active: true, // Default to true since column doesn't exist in actual schema
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        };
+
+        setProfile(updatedProfile);
+        console.log('✅ Profile updated successfully:', updatedProfile);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('❌ Profile update error:', error);
+      return false;
+    }
   };
 
   const logout = async (): Promise<void> => {
     try {
       console.log('Starting logout process...');
-      setIsLoading(true);
+      setLoadingWithLog(true);
       
       // Clear auth state first
       setUser(null);
@@ -373,7 +609,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.clear();
       sessionStorage.clear();
     } finally {
-      setIsLoading(false);
+      setLoadingWithLog(false);
     }
   };
 
@@ -385,6 +621,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profile, 
       login, 
       register, 
+      updateProfile,
+      createProfileManually,
       logout, 
       isLoading, 
       isAdmin 

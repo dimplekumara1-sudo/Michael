@@ -1,7 +1,7 @@
 -- =====================================================
 -- COMPLETE AUTH REINTEGRATION SCRIPT
 -- This script will drop and recreate the profiles table with proper triggers
--- and create the admin user with name "Michael"
+-- and create the admin user with name "Micheal"
 -- =====================================================
 
 -- Step 1: Drop existing profiles table and related objects
@@ -133,7 +133,7 @@ BEGIN
     VALUES (
         NEW.id,
         CASE 
-            WHEN NEW.email = 'admin@photography.com' THEN 'Michael'
+            WHEN NEW.email = 'admin@photography.com' THEN 'Micheal'
             ELSE COALESCE(NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
         END,
         NEW.email,
@@ -156,9 +156,9 @@ BEGIN
     SET 
         email = NEW.email,
         updated_at = NEW.updated_at,
-        -- Only update name if it's not the admin user (preserve "Michael")
+        -- Only update name if it's not the admin user (preserve "Micheal")
         name = CASE 
-            WHEN NEW.email = 'admin@photography.com' THEN 'Michael'
+            WHEN NEW.email = 'admin@photography.com' THEN 'Micheal'
             WHEN OLD.email != NEW.email THEN COALESCE(NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
             ELSE name
         END
@@ -222,7 +222,7 @@ BEGIN
         VALUES (
             user_record.id,
             CASE 
-                WHEN user_record.email = 'admin@photography.com' THEN 'Michael'
+                WHEN user_record.email = 'admin@photography.com' THEN 'Micheal'
                 ELSE COALESCE(user_record.raw_user_meta_data->>'name', user_record.raw_user_meta_data->>'full_name', split_part(user_record.email, '@', 1))
             END,
             user_record.email,
@@ -235,7 +235,7 @@ BEGIN
         )
         ON CONFLICT (id) DO UPDATE SET
             name = CASE 
-                WHEN user_record.email = 'admin@photography.com' THEN 'Michael'
+                WHEN user_record.email = 'admin@photography.com' THEN 'Micheal'
                 ELSE EXCLUDED.name
             END,
             email = EXCLUDED.email,
@@ -271,7 +271,7 @@ INSERT INTO public.profiles (id, name, email, role, created_at, updated_at)
 SELECT 
     au.id,
     CASE 
-        WHEN au.email = 'admin@photography.com' THEN 'Michael'
+        WHEN au.email = 'admin@photography.com' THEN 'Micheal'
         ELSE COALESCE(au.raw_user_meta_data->>'name', au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1))
     END as name,
     au.email,
@@ -284,7 +284,7 @@ SELECT
 FROM auth.users au
 ON CONFLICT (id) DO UPDATE SET
     name = CASE 
-        WHEN EXCLUDED.email = 'admin@photography.com' THEN 'Michael'
+        WHEN EXCLUDED.email = 'admin@photography.com' THEN 'Micheal'
         ELSE EXCLUDED.name
     END,
     email = EXCLUDED.email,
@@ -315,4 +315,4 @@ SELECT id, name, email, role, created_at FROM public.profiles ORDER BY created_a
 
 -- Success message
 SELECT 'SUCCESS: Auth reintegration completed! Profiles table recreated with automatic sync triggers.' as status;
-SELECT 'Admin user "Michael" will be created automatically when they first login or register.' as note;
+SELECT 'Admin user "Micheal" will be created automatically when they first login or register.' as note;

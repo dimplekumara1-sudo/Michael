@@ -101,7 +101,7 @@ SELECT
     COALESCE(
         raw_user_meta_data->>'name',
         raw_user_meta_data->>'full_name',
-        'Michael'
+        'Micheal'
     ),
     CASE 
         WHEN email = 'admin@photography.com' THEN 'admin'

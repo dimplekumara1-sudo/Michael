@@ -4,7 +4,7 @@
 -- Update the admin profile to have the correct name
 UPDATE public.profiles 
 SET 
-    name = 'Michael',
+    name = 'Micheal',
     updated_at = NOW()
 WHERE email = 'admin@photography.com';
 
@@ -18,7 +18,7 @@ SELECT
 FROM auth.users
 WHERE email = 'admin@photography.com'
 ON CONFLICT (id) DO UPDATE SET
-    name = 'Michael',
+    name = 'Micheal',
     role = 'admin',
     updated_at = NOW();
 

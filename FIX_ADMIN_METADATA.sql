@@ -4,8 +4,8 @@
 -- Update the admin user's metadata to include name and full_name
 UPDATE auth.users 
 SET raw_user_meta_data = jsonb_build_object(
-    'name', 'Michael',
-    'full_name', 'Michael',
+    'name', 'Micheal',
+    'full_name', 'Micheal',
     'email_verified', true
 )
 WHERE email = 'admin@photography.com';

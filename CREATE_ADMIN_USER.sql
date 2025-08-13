@@ -33,7 +33,7 @@ INSERT INTO auth.users (
   NOW(),
   NOW(),
   '{"provider": "email", "providers": ["email"]}',
-  '{"name": "Michael", "full_name": "Michael"}',
+  '{"name": "Micheal", "full_name": "Micheal"}',
   NOW(),
   NOW(),
   '',

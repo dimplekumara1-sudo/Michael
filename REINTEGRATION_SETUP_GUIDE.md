@@ -4,7 +4,7 @@
 This guide will help you completely reintegrate your authentication system by:
 1. **Dropping** the current profiles table
 2. **Recreating** it with proper structure and triggers
-3. **Creating** the admin user "Michael" with correct credentials
+3. **Creating** the admin user "Micheal" with correct credentials
 4. **Ensuring** automatic sync between auth.users and profiles
 
 ## Step-by-Step Setup
@@ -25,7 +25,7 @@ This guide will help you completely reintegrate your authentication system by:
    - Should see: "SUCCESS: Auth reintegration completed!"
    - Check that profiles table is recreated with triggers
 
-### Step 2: Create Michael Admin User
+### Step 2: Create Micheal Admin User
 
 **Option A: Using Node.js Script (Recommended)**
 ```bash
@@ -53,7 +53,7 @@ node create-michael-admin.js
 1. **Check Database Tables**
    - Go to **Table Editor → profiles**
    - Should see admin user with:
-     - Name: "Michael"
+     - Name: "Micheal"
      - Email: "admin@photography.com"
      - Role: "admin"
 
@@ -65,19 +65,19 @@ node create-michael-admin.js
    - Should login successfully
 
 3. **Verify Profile Display**
-   - After login, profile should show "Michael" as the name
+   - After login, profile should show "Micheal" as the name
    - Admin dashboard should be accessible
 
 ## What the New System Does
 
 ### Automatic Profile Creation
 - **Trigger**: `on_auth_user_created` automatically creates profile when user registers
-- **Admin Detection**: Automatically sets name to "Michael" for admin@photography.com
+- **Admin Detection**: Automatically sets name to "Micheal" for admin@photography.com
 - **Role Assignment**: Automatically assigns "admin" role to admin@photography.com
 
 ### Automatic Profile Updates
 - **Trigger**: `on_auth_user_updated` keeps profile in sync with auth changes
-- **Name Preservation**: Admin name "Michael" is preserved during updates
+- **Name Preservation**: Admin name "Micheal" is preserved during updates
 - **Email Sync**: Profile email stays in sync with auth email
 
 ### Automatic Profile Cleanup

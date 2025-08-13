@@ -1,4 +1,4 @@
-# Supabase Setup Guide for Michael Photography
+# Supabase Setup Guide for Micheal photographs
 
 This guide will help you set up Supabase for your photography business application.
 
@@ -244,4 +244,4 @@ SELECT * FROM profiles; -- Should only return the user's profile
 6. ✅ Test admin functionality
 7. ✅ Set up file storage for photos (optional)
 
-Your Michael Photography app is now ready with a fully secure, scalable Supabase backend!
+Your Micheal photographs app is now ready with a fully secure, scalable Supabase backend!

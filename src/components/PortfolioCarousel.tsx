@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
+import { useSliderMedia } from '../hooks/useSliderMedia';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -15,52 +16,42 @@ interface PortfolioItem {
   category: string;
 }
 
-const portfolioItems: PortfolioItem[] = [
-  {
-    id: 1,
-    image: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'Wedding',
-    subtitle: 'THE BIG DAY',
-    category: 'wedding'
-  },
-  {
-    id: 2,
-    image: 'https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'FILMS',
-    subtitle: 'CREATIVITY SHOW',
-    category: 'films'
-  },
-  {
-    id: 3,
-    image: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'Outdoors',
-    subtitle: 'BEGINNING OF A JOURNEY',
-    category: 'outdoors'
-  },
-  {
-    id: 4,
-    image: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'Corporate',
-    subtitle: 'PROFESSIONAL EXCELLENCE',
-    category: 'corporate'
-  },
-  {
-    id: 5,
-    image: 'https://images.pexels.com/photos/1721932/pexels-photo-1721932.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'Portrait',
-    subtitle: 'PERSONAL STORIES',
-    category: 'portrait'
-  },
-  {
-    id: 6,
-    image: 'https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=800',
-    title: 'Events',
-    subtitle: 'MEMORABLE MOMENTS',
-    category: 'events'
-  }
-];
-
 const PortfolioCarousel: React.FC = () => {
+  const { getSliderPostsWithFallback, migratePortfolioItems, isLoading } = useSliderMedia();
+  const portfolioItems = getSliderPostsWithFallback();
+
+  // Auto-migrate portfolio items on first load if needed
+  useEffect(() => {
+    const initializeSliderContent = async () => {
+      try {
+        await migratePortfolioItems();
+      } catch (error) {
+        console.error('Failed to initialize slider content:', error);
+      }
+    };
+
+    initializeSliderContent();
+  }, [migratePortfolioItems]);
+
+  if (isLoading) {
+    return (
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              See My Work
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Loading portfolio content...
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">

@@ -72,7 +72,7 @@ const AuthIntegrationTest: React.FC = () => {
    Role: ${adminProfile.role}
    Created: ${new Date(adminProfile.created_at).toLocaleString()}`);
         
-        if (adminProfile.name === 'Michael' && adminProfile.role === 'admin') {
+        if (adminProfile.name === 'Micheal' && adminProfile.role === 'admin') {
           setStatus(prev => prev + '\n✅ Admin profile is correctly configured!');
         } else {
           setStatus(prev => prev + '\n⚠️  Admin profile has incorrect data');
@@ -168,9 +168,9 @@ const AuthIntegrationTest: React.FC = () => {
     }
   };
 
-  const createMichaelAdmin = async () => {
+  const createMichealAdmin = async () => {
     setLoading(true);
-    setStatus('Creating Michael admin user...');
+    setStatus('Creating Micheal admin user...');
 
     try {
       // Check if admin already exists
@@ -213,8 +213,8 @@ const AuthIntegrationTest: React.FC = () => {
           password: 'admin123',
           email_confirm: true,
           user_metadata: {
-            name: 'Michael',
-            full_name: 'Michael'
+            name: 'Micheal',
+            full_name: 'Micheal'
           }
         });
 
@@ -242,7 +242,7 @@ const AuthIntegrationTest: React.FC = () => {
         }
       }
 
-      setStatus(prev => prev + '\n\n✅ Michael admin setup completed!');
+      setStatus(prev => prev + '\n\n✅ Micheal admin setup completed!');
       setStatus(prev => prev + '\n📝 Credentials: admin@photography.com / admin123');
 
     } catch (error) {
@@ -304,11 +304,11 @@ const AuthIntegrationTest: React.FC = () => {
         </button>
 
         <button
-          onClick={createMichaelAdmin}
+          onClick={createMichealAdmin}
           disabled={loading}
           className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
         >
-          👤 Create/Verify Michael Admin
+          👤 Create/Verify Micheal Admin
         </button>
 
         <button
@@ -331,7 +331,7 @@ const AuthIntegrationTest: React.FC = () => {
         <ol className="list-decimal list-inside space-y-1">
           <li>✅ Database triggers installed and working</li>
           <li>✅ Auth-profile sync is perfect (0 missing, 0 orphaned)</li>
-          <li>✅ Admin profile exists with name "Michael" and role "admin"</li>
+          <li>✅ Admin profile exists with name "Micheal" and role "admin"</li>
           <li>✅ Login functionality works correctly</li>
           <li>✅ Registration automatically creates profiles</li>
         </ol>

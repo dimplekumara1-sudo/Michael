@@ -21,7 +21,6 @@ export type Database = {
           mega_link: string | null
           qr_code: string | null
           notes: string | null
-          mobile: string
           created_at: string
           updated_at: string
         }
@@ -36,7 +35,6 @@ export type Database = {
           mega_link?: string | null
           qr_code?: string | null
           notes?: string | null
-          mobile: string
           created_at?: string
           updated_at?: string
         }
@@ -51,7 +49,6 @@ export type Database = {
           mega_link?: string | null
           qr_code?: string | null
           notes?: string | null
-          mobile?: string
           created_at?: string
           updated_at?: string
         }
@@ -144,7 +141,6 @@ export type Database = {
           mobile: string | null
           role: string
           avatar: string | null
-          is_active: boolean | null
           created_at: string | null
           updated_at: string | null
         }
@@ -155,7 +151,6 @@ export type Database = {
           mobile?: string | null
           role?: string
           avatar?: string | null
-          is_active?: boolean | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -166,7 +161,6 @@ export type Database = {
           mobile?: string | null
           role?: string
           avatar?: string | null
-          is_active?: boolean | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -185,34 +179,37 @@ export type Database = {
           id: string
           title: string
           caption: string
-          media_type: 'image' | 'video'
+          media_type: 'image' | 'video' | 'slider' | 'homepage' | 'hero'
           media_url: string
           thumbnail: string | null
           likes: number
           created_at: string
           updated_at: string
+          is_active: boolean
         }
         Insert: {
           id?: string
           title: string
           caption: string
-          media_type: 'image' | 'video'
+          media_type: 'image' | 'video' | 'slider' | 'homepage' | 'hero'
           media_url: string
           thumbnail?: string | null
           likes?: number
           created_at?: string
           updated_at?: string
+          is_active?: boolean
         }
         Update: {
           id?: string
           title?: string
           caption?: string
-          media_type?: 'image' | 'video'
+          media_type?: 'image' | 'video' | 'slider' | 'homepage' | 'hero'
           media_url?: string
           thumbnail?: string | null
           likes?: number
           created_at?: string
           updated_at?: string
+          is_active?: boolean
         }
         Relationships: []
       }
@@ -240,7 +237,7 @@ export type Database = {
     }
     Enums: {
       booking_status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
-      media_type: 'image' | 'video'
+      media_type: 'image' | 'video' | 'slider' | 'homepage' | 'hero'
     }
     CompositeTypes: {
       [_ in never]: never

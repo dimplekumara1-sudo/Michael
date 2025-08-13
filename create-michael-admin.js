@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Create Michael Admin User Script
- * This script creates the admin user "Michael" in Supabase auth
+ * Create Micheal Admin User Script
+ * This script creates the admin user "Micheal" in Supabase auth
  * The profile will be automatically created by the database triggers
  */
 
@@ -42,9 +42,9 @@ function initializeSupabase() {
   });
 }
 
-// Create Michael admin user
-async function createMichaelAdmin(supabase) {
-  console.log('👤 Creating Michael admin user...');
+// Create Micheal admin user
+async function createMichealAdmin(supabase) {
+  console.log('👤 Creating Micheal admin user...');
   
   try {
     // Check if admin user already exists
@@ -62,12 +62,12 @@ async function createMichaelAdmin(supabase) {
       console.log('   Email:', existingAdmin.email);
       console.log('   Created:', existingAdmin.created_at);
       
-      // Update user metadata to ensure name is "Michael"
+      // Update user metadata to ensure name is "Micheal"
       const { data: updatedUser, error: updateError } = await supabase.auth.admin.updateUserById(
         existingAdmin.id,
         {
           user_metadata: {
-            name: 'Michael',
+            name: 'Micheal',
             role: 'admin'
           }
         }
@@ -76,7 +76,7 @@ async function createMichaelAdmin(supabase) {
       if (updateError) {
         console.warn('⚠️  Could not update user metadata:', updateError.message);
       } else {
-        console.log('✅ User metadata updated with name "Michael"');
+        console.log('✅ User metadata updated with name "Micheal"');
       }
       
       return existingAdmin;
@@ -89,8 +89,8 @@ async function createMichaelAdmin(supabase) {
       password: 'admin123',
       email_confirm: true,
       user_metadata: {
-        name: 'Michael',
-        full_name: 'Michael',
+        name: 'Micheal',
+        full_name: 'Micheal',
         role: 'admin'
       }
     });
@@ -101,10 +101,10 @@ async function createMichaelAdmin(supabase) {
     }
     
     if (data.user) {
-      console.log('✅ Michael admin user created successfully!');
+      console.log('✅ Micheal admin user created successfully!');
       console.log('   User ID:', data.user.id);
       console.log('   Email:', data.user.email);
-      console.log('   Name: Michael (from metadata)');
+      console.log('   Name: Micheal (from metadata)');
       return data.user;
     }
     
@@ -143,8 +143,8 @@ async function verifyProfileCreation(supabase, adminUser) {
       console.log('   Role:', profile.role);
       console.log('   Created:', profile.created_at);
       
-      if (profile.name === 'Michael' && profile.role === 'admin') {
-        console.log('✅ Profile has correct name "Michael" and admin role!');
+      if (profile.name === 'Micheal' && profile.role === 'admin') {
+        console.log('✅ Profile has correct name "Micheal" and admin role!');
         return true;
       } else {
         console.warn('⚠️  Profile exists but has incorrect data');
@@ -228,7 +228,7 @@ async function checkSyncStatus(supabase) {
 
 // Main function
 async function main() {
-  console.log('🚀 Creating Michael Admin User...\n');
+  console.log('🚀 Creating Micheal Admin User...\n');
   
   // Validate configuration
   validateConfig();
@@ -238,8 +238,8 @@ async function main() {
   const supabase = initializeSupabase();
   console.log('✅ Supabase client initialized\n');
   
-  // Create Michael admin user
-  const adminUser = await createMichaelAdmin(supabase);
+  // Create Micheal admin user
+  const adminUser = await createMichealAdmin(supabase);
   if (!adminUser) {
     console.error('💥 Failed to create admin user');
     process.exit(1);
@@ -260,16 +260,16 @@ async function main() {
   
   // Final status
   if (profileOk && loginOk) {
-    console.log('🎉 Michael Admin User Setup Completed Successfully!');
+    console.log('🎉 Micheal Admin User Setup Completed Successfully!');
     console.log('');
     console.log('Admin Credentials:');
-    console.log('  Name: Michael');
+    console.log('  Name: Micheal');
     console.log('  Email: admin@photography.com');
     console.log('  Password: admin123');
     console.log('  Role: admin');
     console.log('');
     console.log('✅ You can now login with these credentials!');
-    console.log('✅ Profile will show "Michael" as the name');
+    console.log('✅ Profile will show "Micheal" as the name');
     console.log('✅ Admin dashboard access enabled');
   } else {
     console.log('⚠️  Setup completed with issues. Please check the logs above.');

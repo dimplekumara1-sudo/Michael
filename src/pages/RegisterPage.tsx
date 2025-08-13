@@ -31,15 +31,33 @@ const RegisterPage = () => {
       return;
     }
 
-    const success = await registerUser(data.email, data.password, data.name, data.mobile);
-    
-    if (success) {
-      setSuccess('Account created successfully! Redirecting to dashboard...');
-      setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 2000);
-    } else {
-      setError('Registration failed. Please try again.');
+    try {
+      console.log('Starting registration process for:', data.email);
+      setSuccess('Creating your account...');
+      
+      const success = await registerUser(data.email, data.password, data.name, data.mobile);
+      
+      if (success) {
+        setSuccess('🎉 Account created successfully! Redirecting to sign in...');
+        setTimeout(() => {
+          navigate('/login', { 
+            replace: true,
+            state: { 
+              message: 'Account created successfully! Please sign in with your credentials.',
+              email: data.email 
+            }
+          });
+        }, 2000);
+      } else {
+        // Provide more helpful error messages based on the registration result
+        setError('Registration failed. This could be due to:');
+        setTimeout(() => {
+          setError(prev => prev + '\n• Email already exists\n• Database triggers are blocking registration\n• Invalid password format\n• Database connectivity issues\n\nIf this persists, the database may need to be fixed. Please contact support.');
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Registration error in component:', error);
+      setError('An unexpected error occurred during registration. Please try again.');
     }
   };
 
@@ -56,7 +74,7 @@ const RegisterPage = () => {
               </div>
             </div>
             <h2 className="mt-4 text-3xl font-bold text-gray-900">Create Account</h2>
-            <p className="mt-2 text-gray-600">Join Michael Photography and start booking amazing photography</p>
+            <p className="mt-2 text-gray-600">Join Micheal photographs and start booking amazing photography</p>
           </div>
 
           {error && (

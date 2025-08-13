@@ -1,20 +1,149 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, MapPin, Clock, Camera, Download, QrCode, Plus, Filter, Search, Smartphone, User, Settings } from 'lucide-react';
-import { mockBookings, mockGalleries } from '../data/mockData';
+import { mockBookings } from '../data/mockData';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Booking } from '../types';
+import { Booking, Gallery } from '../types';
 import Notification from '../components/Notification';
 import ProfileManager from '../components/ProfileManager';
 import QRCode from 'qrcode.react';
 
-const UserDashboard = () => {
-  const { user, profile, isLoading } = useAuth();
+// Separate BookingForm component to prevent re-renders and focus loss
+interface BookingFormProps {
+  bookingForm: {
+    eventType: string;
+    eventDate: string;
+    location: string;
+    notes: string;
+    mobile: string;
+  };
+  handleFormChange: (field: string, value: string) => void;
+  handleSubmitBooking: (e: React.FormEvent) => void;
+  submittingBooking: boolean;
+  onClose: () => void;
+}
+
+const BookingForm: React.FC<BookingFormProps> = React.memo(({ 
+  bookingForm, 
+  handleFormChange, 
+  handleSubmitBooking, 
+  submittingBooking, 
+  onClose 
+}) => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-xl max-w-2xl w-full p-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">Book New Event</h3>
+      <form onSubmit={handleSubmitBooking} className="space-y-4">
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Event Type *</label>
+            <select 
+              value={bookingForm.eventType}
+              onChange={(e) => handleFormChange('eventType', e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select event type</option>
+              <option value="Wedding">Wedding</option>
+              <option value="Corporate Event">Corporate Event</option>
+              <option value="Portrait Session">Portrait Session</option>
+              <option value="Birthday Party">Birthday Party</option>
+              <option value="Engagement">Engagement</option>
+              <option value="Family Portrait">Family Portrait</option>
+              <option value="Maternity">Maternity</option>
+              <option value="Product Photography">Product Photography</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Event Date *</label>
+            <input 
+              type="date" 
+              value={bookingForm.eventDate}
+              onChange={(e) => handleFormChange('eventDate', e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+            <input 
+              type="text" 
+              value={bookingForm.location}
+              onChange={(e) => handleFormChange('location', e.target.value)}
+              placeholder="Enter event location"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contact Mobile 
+              <span className="text-sm text-gray-500">(Optional - for booking updates)</span>
+            </label>
+            <input 
+              type="tel" 
+              value={bookingForm.mobile}
+              onChange={(e) => handleFormChange('mobile', e.target.value)}
+              placeholder="Enter your mobile number for updates"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              We'll use this to send you booking updates and confirmations
+            </p>
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
+          <textarea 
+            rows={4}
+            value={bookingForm.notes}
+            onChange={(e) => handleFormChange('notes', e.target.value)}
+            placeholder="Any special requirements, preferred time, number of guests, or other details..."
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+          ></textarea>
+        </div>
+        <div className="flex gap-4 pt-4">
+          <button
+            type="submit"
+            disabled={submittingBooking}
+            className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+          >
+            {submittingBooking ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Submitting...
+              </>
+            ) : (
+              'Submit Booking Request'
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submittingBooking}
+            className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 disabled:opacity-50 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+));
+
+const UserDashboard = React.memo(() => {
+  const { user, profile, isLoading, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('bookings');
   const [showQR, setShowQR] = useState<string | null>(null);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
+  const [userGalleries, setUserGalleries] = useState<Gallery[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [loadingGalleries, setLoadingGalleries] = useState(false);
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [showProfileManager, setShowProfileManager] = useState(false);
   const [bookingForm, setBookingForm] = useState({
@@ -29,6 +158,18 @@ const UserDashboard = () => {
     title: string;
     message: string;
   } | null>(null);
+
+  // Single optimized form handler to prevent re-render issues
+  const handleFormChange = useCallback((field: string, value: string) => {
+    setBookingForm(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // Update mobile when profile loads (only when profile changes, not when form changes)
+  useEffect(() => {
+    if (profile?.mobile && !bookingForm.mobile) {
+      setBookingForm(prev => ({ ...prev, mobile: profile.mobile || '' }));
+    }
+  }, [profile?.mobile]); // Removed bookingForm.mobile from dependencies to prevent re-renders
 
   // Fetch user's bookings
   const fetchUserBookings = async () => {
@@ -59,7 +200,8 @@ const UserDashboard = () => {
           megaLink: booking.mega_link,
           qrCode: booking.qr_code,
           notes: booking.notes,
-          createdAt: booking.created_at
+          createdAt: booking.created_at,
+          updatedAt: booking.updated_at
         }));
         setUserBookings(transformedBookings);
       }
@@ -71,18 +213,89 @@ const UserDashboard = () => {
     }
   };
 
+  // Fetch user's galleries
+  const fetchUserGalleries = async () => {
+    if (!user?.id) return;
+    
+    setLoadingGalleries(true);
+    try {
+      console.log('🔍 Fetching user galleries...');
+      
+      // Fetch galleries for user's bookings with booking details
+      const { data: galleriesData, error: galleriesError } = await supabase
+        .from('galleries')
+        .select(`
+          *,
+          bookings:booking_id (
+            event_date,
+            location,
+            event_type,
+            status,
+            user_id
+          )
+        `)
+        .eq('bookings.user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (galleriesError) {
+        console.error('Error fetching user galleries:', galleriesError);
+        setUserGalleries([]);
+        return;
+      }
+
+      // Transform the data to match Gallery interface
+      const transformedGalleries: Gallery[] = galleriesData
+        .filter(gallery => gallery.bookings) // Only include galleries with valid bookings
+        .map(gallery => ({
+          id: gallery.id,
+          bookingId: gallery.booking_id,
+          title: gallery.title,
+          mediaURLs: gallery.media_urls || [],
+          isPublic: gallery.is_public,
+          megaLink: gallery.mega_link,
+          qrCodeData: gallery.qr_code_data,
+          // Add booking information for display
+          booking: {
+            eventDate: gallery.bookings.event_date,
+            location: gallery.bookings.location,
+            eventType: gallery.bookings.event_type,
+            status: gallery.bookings.status,
+            customerName: '', // Not needed for user view
+            customerEmail: ''  // Not needed for user view
+          }
+        }));
+
+      console.log('✅ User galleries fetched successfully:', transformedGalleries.length, 'galleries');
+      setUserGalleries(transformedGalleries);
+    } catch (error) {
+      console.error('Unexpected error fetching user galleries:', error);
+      setUserGalleries([]);
+    } finally {
+      setLoadingGalleries(false);
+    }
+  };
+
   // Submit new booking
   const handleSubmitBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
 
-    if (!bookingForm.eventType || !bookingForm.eventDate || !bookingForm.location || !bookingForm.mobile) {
-      alert('Please fill in all required fields including mobile number');
+    if (!bookingForm.eventType || !bookingForm.eventDate || !bookingForm.location) {
+      setNotification({
+        type: 'error',
+        title: 'Missing Information',
+        message: 'Please fill in all required fields (Event Type, Date, and Location).'
+      });
       return;
     }
 
     setSubmittingBooking(true);
     try {
+      // Update user profile with mobile if provided and different
+      if (bookingForm.mobile && bookingForm.mobile !== profile?.mobile) {
+        await updateProfile({ mobile: bookingForm.mobile });
+      }
+
       const { error } = await supabase
         .from('bookings')
         .insert({
@@ -91,7 +304,6 @@ const UserDashboard = () => {
           event_date: bookingForm.eventDate,
           location: bookingForm.location,
           notes: bookingForm.notes || null,
-          mobile: bookingForm.mobile,
           status: 'pending'
         });
 
@@ -114,7 +326,7 @@ const UserDashboard = () => {
           eventDate: '',
           location: '',
           notes: '',
-          mobile: ''
+          mobile: profile?.mobile || ''
         });
         // Refresh bookings
         fetchUserBookings();
@@ -131,10 +343,11 @@ const UserDashboard = () => {
     }
   };
 
-  // Load user bookings on component mount
+  // Load user bookings and galleries on component mount
   useEffect(() => {
     if (user?.id) {
       fetchUserBookings();
+      fetchUserGalleries();
     }
   }, [user?.id]);
 
@@ -168,133 +381,40 @@ const UserDashboard = () => {
     );
   }
 
-  const BookingForm = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl max-w-2xl w-full p-6">
-        <h3 className="text-2xl font-bold text-gray-900 mb-6">Book New Event</h3>
-        <form onSubmit={handleSubmitBooking} className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Event Type *</label>
-              <select 
-                value={bookingForm.eventType}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, eventType: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select event type</option>
-                <option value="Wedding">Wedding</option>
-                <option value="Corporate Event">Corporate Event</option>
-                <option value="Portrait Session">Portrait Session</option>
-                <option value="Birthday Party">Birthday Party</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Event Date *</label>
-              <input 
-                type="date" 
-                value={bookingForm.eventDate}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, eventDate: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
-              <input 
-                type="text" 
-                value={bookingForm.location}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, location: e.target.value }))}
-                placeholder="Enter event location"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number *</label>
-              <input 
-                type="tel" 
-                value={bookingForm.mobile}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, mobile: e.target.value }))}
-                placeholder="Enter your mobile number"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
-            <textarea 
-              rows={3}
-              value={bookingForm.notes}
-              onChange={(e) => setBookingForm(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Any special requirements or notes..."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            ></textarea>
-          </div>
-          <div className="flex gap-4 pt-4">
-            <button
-              type="submit"
-              disabled={submittingBooking}
-              className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center"
-            >
-              {submittingBooking ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Submitting...
-                </>
-              ) : (
-                'Submit Booking Request'
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowBookingForm(false)}
-              disabled={submittingBooking}
-              className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 disabled:opacity-50 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-semibold">
-                {(profile?.name || user?.email || 'U').charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Welcome back, {profile?.name || user?.email?.split('@')[0]}!</h1>
-                <p className="text-gray-600">Manage your bookings and view your galleries</p>
-              </div>
+          {/* User Info Section */}
+          <div className="flex items-center space-x-4 mb-6">
+            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-semibold">
+              {(profile?.name || user?.email || 'U').charAt(0).toUpperCase()}
             </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setShowProfileManager(true)}
-                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
-              >
-                <Settings className="h-4 w-4" />
-                <span>Profile</span>
-              </button>
-              <button
-                onClick={() => setShowBookingForm(true)}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Book Event</span>
-              </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Welcome back, {profile?.name || user?.email?.split('@')[0]}!</h1>
+              <p className="text-gray-600">Manage your bookings and view your galleries</p>
             </div>
+          </div>
+          
+          {/* Action Buttons Section */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowProfileManager(true)}
+              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+            >
+              <Settings className="h-4 w-4" />
+              <span>Profile</span>
+            </button>
+            <button
+              onClick={() => setShowBookingForm(true)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Book Event</span>
+            </button>
           </div>
         </div>
 
@@ -506,43 +626,109 @@ const UserDashboard = () => {
 
             {activeTab === 'galleries' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-bold text-gray-900">My Galleries</h2>
-                {mockGalleries.map((gallery) => (
-                  <div key={gallery.id} className="border border-gray-200 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">{gallery.title}</h3>
-                      <button
-                        onClick={() => setShowQR(gallery.megaLink)}
-                        className="flex items-center space-x-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                      >
-                        <QrCode className="h-4 w-4" />
-                        <span>QR Code</span>
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                      {gallery.mediaURLs.slice(0, 4).map((url, index) => (
-                        <img
-                          key={index}
-                          src={url}
-                          alt={`Gallery item ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg"
-                        />
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{gallery.mediaURLs.length} photos</span>
-                      <a
-                        href={gallery.megaLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
-                      >
-                        <Download className="h-4 w-4" />
-                        <span>Download All</span>
-                      </a>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">My Galleries</h2>
+                  <button
+                    onClick={fetchUserGalleries}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {loadingGalleries ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading your galleries...</p>
                   </div>
-                ))}
+                ) : userGalleries.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Galleries Yet</h3>
+                    <p className="text-gray-600 mb-4">
+                      Your photo galleries will appear here once your events are completed and photos are uploaded.
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Have a confirmed booking? Your photographer will add photos after your event.
+                    </p>
+                  </div>
+                ) : (
+                  userGalleries.map((gallery) => (
+                    <div key={gallery.id} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">{gallery.title}</h3>
+                          {gallery.booking && (
+                            <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                              <span className="flex items-center space-x-1">
+                                <Calendar className="h-4 w-4" />
+                                <span>{new Date(gallery.booking.eventDate).toLocaleDateString()}</span>
+                              </span>
+                              <span className="flex items-center space-x-1">
+                                <MapPin className="h-4 w-4" />
+                                <span>{gallery.booking.location}</span>
+                              </span>
+                              <span className="flex items-center space-x-1">
+                                <Camera className="h-4 w-4" />
+                                <span>{gallery.booking.eventType}</span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setShowQR(gallery.megaLink)}
+                          className="flex items-center space-x-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                          <QrCode className="h-4 w-4" />
+                          <span>QR Code</span>
+                        </button>
+                      </div>
+
+                      {/* Gallery Preview */}
+                      {gallery.mediaURLs && gallery.mediaURLs.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          {gallery.mediaURLs.slice(0, 4).map((url, index) => (
+                            <img
+                              key={index}
+                              src={url}
+                              alt={`Gallery item ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
+                          ))}
+                          {gallery.mediaURLs.length > 4 && (
+                            <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <span className="text-gray-500 text-sm">+{gallery.mediaURLs.length - 4} more</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 rounded-lg p-8 mb-4 text-center">
+                          <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-600 text-sm">Photos will be added here after your event</p>
+                        </div>
+                      )}
+
+                      {/* Gallery Actions */}
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <span className="text-sm text-gray-600">
+                          {gallery.mediaURLs?.length || 0} photos available
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          <a
+                            href={gallery.megaLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center space-x-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                          >
+                            <Download className="h-4 w-4" />
+                            <span>Download All</span>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -601,7 +787,15 @@ const UserDashboard = () => {
       )}
 
       {/* Booking Form Modal */}
-      {showBookingForm && <BookingForm />}
+      {showBookingForm && (
+        <BookingForm 
+          bookingForm={bookingForm}
+          handleFormChange={handleFormChange}
+          handleSubmitBooking={handleSubmitBooking}
+          submittingBooking={submittingBooking}
+          onClose={() => setShowBookingForm(false)}
+        />
+      )}
 
       {/* Profile Manager Modal */}
       {showProfileManager && (
@@ -623,6 +817,6 @@ const UserDashboard = () => {
       )}
     </div>
   );
-};
+});
 
 export default UserDashboard;

@@ -1,4 +1,4 @@
--- Michael Photography Database Migration
+-- Micheal photographs Database Migration
 -- This migration creates all necessary tables for the photography business application
 -- with Row Level Security (RLS) policies
 

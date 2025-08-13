@@ -3,6 +3,6 @@ export interface ContactMessage {
   name: string;
   email: string;
   message: string;
-  status: 'unread' | 'read';
+  status: 'unread' | 'read' | 'replied';
   createdAt: string;
 }

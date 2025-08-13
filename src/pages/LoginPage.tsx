@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Camera, Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, LoginResult } from '../contexts/AuthContext';
 
 
 interface LoginForm {
@@ -13,10 +13,23 @@ interface LoginForm {
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+  const [success, setSuccess] = useState('');
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<LoginForm>();
   const { login, isLoading, isAdmin, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Check for success message from registration
+  React.useEffect(() => {
+    if (location.state?.message) {
+      setSuccess(location.state.message);
+      if (location.state.email) {
+        setValue('email', location.state.email);
+      }
+      // Clear the state to prevent showing the message again
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, setValue]);
 
   const onSubmit = async (data: LoginForm) => {
     setError('');
@@ -24,10 +37,10 @@ const LoginPage = () => {
     console.log('Email:', data.email);
     
     try {
-      const success = await login(data.email, data.password);
-      console.log('Login Success:', success);
+      const result = await login(data.email, data.password);
+      console.log('Login Result:', result);
       
-      if (success) {
+      if (result.success) {
         // Simple navigation - let the auth state change handle the redirect
         const destination = data.email === 'admin@photography.com' ? '/admin' : '/dashboard';
         console.log('Navigating to:', destination);
@@ -37,7 +50,7 @@ const LoginPage = () => {
           navigate(destination, { replace: true });
         }, 100);
       } else {
-        setError('Invalid email or password. Please check your credentials and try again.');
+        setError(result.error || 'An unexpected error occurred. Please try again.');
       }
     } catch (error) {
       console.error('Submission Error:', error);
@@ -58,8 +71,14 @@ const LoginPage = () => {
               </div>
             </div>
             <h2 className="mt-4 text-3xl font-bold text-gray-900">Welcome Back</h2>
-            <p className="mt-2 text-gray-600">Sign in to your Michael Photography account</p>
+            <p className="mt-2 text-gray-600">Sign in to your Micheal photographs account</p>
           </div>
+
+          {success && (
+            <div className="mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              {success}
+            </div>
+          )}
 
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">

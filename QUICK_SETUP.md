@@ -1,4 +1,4 @@
-# Quick Setup Guide - Michael Photography Supabase Integration
+# Quick Setup Guide - Micheal photographs Supabase Integration
 
 ## 🚀 Step-by-Step Setup
 
@@ -127,4 +127,4 @@ Once everything is working:
 4. Add payment integration
 5. Deploy to production
 
-Your Michael Photography app is now ready with full authentication and database integration! 🎉
+Your Micheal photographs app is now ready with full authentication and database integration! 🎉
