@@ -3,8 +3,8 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = 'https://vlvecmxfsbvwrcnminmz.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsdmVjbXhmc2J2d3Jjbm1pbm16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MDM3ODAsImV4cCI6MjA2OTM3OTc4MH0.6-rTnD4NexiOb_yIjc6rDsga0yHH3IhdpB8UyuI2TOw';
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
