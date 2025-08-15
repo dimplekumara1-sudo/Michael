@@ -7,7 +7,7 @@ import {
   ArrowRight, 
   Play, 
   MapPin, 
-  Youtube,
+  Youtube, 
   Send,
   X,
   Copy,
@@ -34,7 +34,7 @@ interface CommentsModalProps {
   onClose: () => void;
   postId: string;
   postTitle: string;
-  onAddComment: (content: string) => Promise<void>;
+  onAddComment: (postId: string, content: string) => Promise<void>;
   getComments: (postId: string) => Promise<Comment[]>;
 }
 
@@ -219,8 +219,8 @@ const LatestWork: React.FC<LatestWorkProps> = ({ limit = 6, showViewAll = true }
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [loginPromptAction, setLoginPromptAction] = useState<'like' | 'comment'>('like');
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [selectedImagePost, setSelectedImagePost] = useState<any>(null);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [selectedPostForViewer, setSelectedPostForViewer] = useState<any>(null);
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
   const handleLike = async (postId: string) => {
@@ -267,27 +267,27 @@ const LatestWork: React.FC<LatestWorkProps> = ({ limit = 6, showViewAll = true }
     }
   };
 
-  const handleImageClick = (post: any) => {
-    setSelectedImagePost(post);
-    setShowImageModal(true);
+  const openPostViewer = (post: any) => {
+    setSelectedPostForViewer(post);
+    setShowPostModal(true);
   };
 
-  const closeImageModal = () => {
-    setShowImageModal(false);
-    setSelectedImagePost(null);
+  const closePostViewer = () => {
+    setShowPostModal(false);
+    setSelectedPostForViewer(null);
   };
 
   // Keyboard support for image modal
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (showImageModal && e.key === 'Escape') {
-        closeImageModal();
+      if (showPostModal && e.key === 'Escape') {
+        closePostViewer();
       }
     };
 
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [showImageModal]);
+  }, [showPostModal]);
 
   const isYouTubeUrl = (url: string) => {
     return url.includes('youtube.com') || url.includes('youtu.be');
@@ -297,7 +297,7 @@ const LatestWork: React.FC<LatestWorkProps> = ({ limit = 6, showViewAll = true }
     const videoId = url.includes('youtu.be') 
       ? url.split('youtu.be/')[1]?.split('?')[0]
       : url.split('v=')[1]?.split('&')[0];
-    return `https://www.youtube.com/embed/${videoId}`;
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
   };
 
   if (loading) {
@@ -368,149 +368,131 @@ const LatestWork: React.FC<LatestWorkProps> = ({ limit = 6, showViewAll = true }
                 <div key={post.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
                   <div className="relative">
                     {/* Media Display */}
-                    {post.youtube_url && isYouTubeUrl(post.youtube_url) ? (
-                      <div className="relative h-64">
-                        <iframe
-                          src={getYouTubeEmbedUrl(post.youtube_url)}
-                          title={post.title}
-                          className="w-full h-full"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                        <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium flex items-center">
-                          <Youtube className="h-3 w-3 mr-1" />
-                          YouTube
-                        </div>
-                      </div>
-                    ) : post.media_type === 'video' ? (
-                      <div className="relative h-64 group">
-                        <video
-                          ref={(el) => (videoRefs.current[post.id] = el)}
-                          src={post.primary_media_url || post.media_url}
-                          poster={post.primary_thumbnail || post.thumbnail || undefined}
-                          className="w-full h-full object-cover"
-                          muted
-                          loop
-                          playsInline
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <button
-                            onClick={() => handleVideoPlay(post.id)}
-                            className="bg-black/50 rounded-full p-4 group-hover:bg-black/70 transition-colors"
-                          >
-                            <Play className="h-8 w-8 text-white" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : post.media_urls && post.media_urls.length > 1 ? (
-                      // Multi-image slider - clickable
-                      <div 
-                        className="cursor-pointer group"
-                        onClick={() => handleImageClick(post)}
-                      >
-                        <MultiImageSlider
-                          images={post.media_urls}
-                          thumbnails={post.thumbnails || undefined}
-                          title={post.title}
-                          autoSlide={true}
-                          autoSlideInterval={5000}
-                          showDots={true}
-                          showArrows={true}
-                          className="h-64"
-                        />
-                        {/* Zoom overlay */}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 rounded-full p-2">
-                            <ZoomIn className="h-6 w-6 text-gray-800" />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      // Single image - clickable
-                      <div 
-                        className="h-64 overflow-hidden cursor-pointer group"
-                        onClick={() => handleImageClick(post)}
-                      >
-                        <img
-                          src={post.primary_media_url || post.media_url}
-                          alt={post.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        {/* Zoom overlay */}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 rounded-full p-2">
-                            <ZoomIn className="h-6 w-6 text-gray-800" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
+{post.youtube_url && isYouTubeUrl(post.youtube_url) ? (
+  <div className="relative h-64">
+<iframe
+  id={`youtube-player-${post.id}`}
+  src={getYouTubeEmbedUrl(post.youtube_url)}
+  title={post.title}
+  className="w-full h-full"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+/>
+    <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium flex items-center">
+      <Youtube className="h-3 w-3 mr-1" />
+      YouTube
+    </div>
+  </div>
+) : post.media_type === 'video' ? (
+  <div className="relative h-64 group">
+    <video
+      ref={(el) => (videoRefs.current[post.id] = el)}
+      src={post.primary_media_url || post.media_url}
+      poster={post.primary_thumbnail || post.thumbnail || undefined}
+      className="w-full h-full object-cover"
+      muted
+      loop
+      playsInline
+    />
+    <div className="absolute inset-0 flex items-center justify-center">
+      <button
+        onClick={() => handleVideoPlay(post.id)}
+        className="bg-black/50 rounded-full p-4 group-hover:bg-black/70 transition-colors"
+      >
+        <Play className="h-8 w-8 text-white" />
+      </button>
+    </div>
+  </div>
+) : post.media_urls && post.media_urls.length > 1 ? (
+  // Multi-image slider - clickable
+  <div 
+    className="cursor-pointer group"
+    onClick={() => openPostViewer(post)}
+  >
+    <MultiImageSlider
+      images={post.media_urls || []}
+      thumbnails={post.thumbnails || []}
+      title={post.title}
+      autoSlide={true}
+      autoSlideInterval={5000}
+      showDots={true}
+      showArrows={true}
+      className="h-64"
+    />
+    {/* Zoom overlay */}
+    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 rounded-full p-2">
+        <ZoomIn className="h-6 w-6 text-gray-800" />
+      </div>
+    </div>
+  </div>
+) : (
+  // Single image - clickable
+  <div 
+    className="h-64 overflow-hidden cursor-pointer group"
+    onClick={() => openPostViewer(post)}
+  >
+    <img
+      src={post.primary_media_url || post.media_url}
+      alt={post.title}
+      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+    />
+    {/* Zoom overlay */}
+    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 rounded-full p-2">
+        <ZoomIn className="h-6 w-6 text-gray-800" />
+      </div>
+    </div>
+  </div>
+)}
 
-                    {/* Location Badge */}
-                    {post.location && (
-                      <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {post.location}
-                      </div>
-                    )}
+{/* Location Badge */}
+{post.location && (
+  <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center">
+    <MapPin className="h-3 w-3 mr-1" />
+    {post.location}
+  </div>
+)}
                   </div>
-                  
-                  <div className="p-6">
-                    <h3 
-                      className="text-xl font-bold text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition-colors"
-                      onClick={() => handleImageClick(post)}
-                    >
-                      {post.title}
-                    </h3>
-                    <p className="text-gray-600 mb-4 line-clamp-2">{post.caption}</p>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        {/* Like Button */}
-                        <button 
-                          onClick={() => handleLike(post.id)}
-                          className={`flex items-center space-x-1 transition-colors ${
-                            post.user_has_liked 
-                              ? 'text-red-500 hover:text-red-600' 
-                              : 'text-gray-500 hover:text-red-500'
-                          }`}
-                          title={user ? (post.user_has_liked ? 'Unlike' : 'Like') : 'Login to like'}
-                        >
-                          <Heart className={`h-5 w-5 ${post.user_has_liked ? 'fill-current' : ''}`} />
-                          <span className="text-sm">{post.like_count || 0}</span>
-                        </button>
-
-                        {/* Comment Button */}
-                        <button 
-                          onClick={() => handleComment(post.id)}
-                          className="flex items-center space-x-1 text-gray-500 hover:text-blue-500 transition-colors"
-                          title="View comments"
-                        >
-                          <MessageCircle className="h-5 w-5" />
-                          <span className="text-sm">{post.comment_count || 0}</span>
-                        </button>
-
-                        {/* Share Button */}
-                        <button 
-                          onClick={() => handleShare(post.id)}
-                          className="flex items-center space-x-1 text-gray-500 hover:text-green-500 transition-colors"
-                          title="Share"
-                        >
-                          {copiedPostId === post.id ? (
-                            <Check className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <Share2 className="h-5 w-5" />
-                          )}
-                          <span className="text-sm">
-                            {copiedPostId === post.id ? 'Copied!' : 'Share'}
-                          </span>
-                        </button>
-                      </div>
-                      
-                      <span className="text-sm text-gray-400">
-                        {new Date(post.created_at).toLocaleDateString()}
-                      </span>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg text-gray-900 truncate group-hover:text-blue-600 transition-colors">{post.title}</h3>
+                    <p className="text-gray-600 text-sm mt-1 truncate">{post.caption}</p>
+                  </div>
+                  <div className="px-4 pb-4 pt-2 flex items-center justify-between border-t border-gray-100">
+                    <div className="flex items-center space-x-4">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleLike(post.id); }} 
+                        className={`flex items-center space-x-1.5 text-gray-500 transition-colors ${
+                          post.user_has_liked 
+                            ? 'text-red-500 hover:text-red-600' 
+                            : 'hover:text-red-500'
+                        }`}
+                        aria-label="Like post"
+                      >
+                        <Heart className={`h-5 w-5 ${post.user_has_liked ? 'fill-current' : ''}`} />
+                        <span className="text-sm font-medium">{post.like_count || 0}</span>
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleComment(post.id); }} 
+                        className="flex items-center space-x-1.5 text-gray-500 hover:text-blue-500 transition-colors"
+                        aria-label="Comment on post"
+                      >
+                        <MessageCircle className="h-5 w-5" />
+                        <span className="text-sm font-medium">{post.comment_count || 0}</span>
+                      </button>
                     </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleShare(post.id); }} 
+                      className="text-gray-500 hover:text-green-500 transition-colors p-2 rounded-full -mr-2"
+                      aria-label="Share post"
+                    >
+                      {copiedPostId === post.id ? (
+                        <Check className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Share2 className="h-5 w-5" />
+                      )}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -549,24 +531,24 @@ const LatestWork: React.FC<LatestWorkProps> = ({ limit = 6, showViewAll = true }
         title="Join Our Community"
       />
 
-      {/* Image Modal */}
-      {showImageModal && selectedImagePost && (
+      {/* Post Viewer Modal */}
+      {showPostModal && selectedPostForViewer && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-7xl max-h-full w-full h-full flex flex-col">
+          <div className="relative max-w-7xl max-h-full w-full h-full flex flex-col pb-20 md:pb-4">
             {/* Header */}
             <div className="flex items-center justify-between p-4 text-white">
               <div className="flex-1">
-                <h2 className="text-2xl font-bold mb-1">{selectedImagePost.title}</h2>
-                <p className="text-gray-300">{selectedImagePost.caption}</p>
-                {selectedImagePost.location && (
+                <h2 className="text-2xl font-bold mb-1">{selectedPostForViewer.title}</h2>
+                <p className="text-gray-300">{selectedPostForViewer.caption}</p>
+                {selectedPostForViewer.location && (
                   <div className="flex items-center mt-2 text-gray-400">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span>{selectedImagePost.location}</span>
+                    <span>{selectedPostForViewer.location}</span>
                   </div>
                 )}
               </div>
               <button
-                onClick={closeImageModal}
+                onClick={closePostViewer}
                 className="p-2 hover:bg-white/10 rounded-full transition-colors ml-4"
               >
                 <X className="h-6 w-6 text-white" />
@@ -575,13 +557,34 @@ const LatestWork: React.FC<LatestWorkProps> = ({ limit = 6, showViewAll = true }
 
             {/* Image Content */}
             <div className="flex-1 flex items-center justify-center min-h-0">
-              {selectedImagePost.media_urls && selectedImagePost.media_urls.length > 1 ? (
+              {selectedPostForViewer.youtube_url && isYouTubeUrl(selectedPostForViewer.youtube_url) ? (
+                <div className="w-full h-full aspect-video">
+                  <iframe
+                    src={getYouTubeEmbedUrl(selectedPostForViewer.youtube_url)}
+                    title={selectedPostForViewer.title}
+                    className="w-full h-full"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : selectedPostForViewer.media_type === 'video' ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <video
+                    src={selectedPostForViewer.primary_media_url || selectedPostForViewer.media_url}
+                    poster={selectedPostForViewer.primary_thumbnail || selectedPostForViewer.thumbnail || undefined}
+                    className="max-w-full max-h-full object-contain"
+                    controls
+                    autoPlay
+                  />
+                </div>
+              ) : selectedPostForViewer.media_urls && selectedPostForViewer.media_urls.length > 1 ? (
                 // Multi-image slider for modal
                 <div className="w-full h-full max-h-[80vh]">
                   <MultiImageSlider
-                    images={selectedImagePost.media_urls}
-                    thumbnails={selectedImagePost.thumbnails || undefined}
-                    title={selectedImagePost.title}
+                    images={selectedPostForViewer.media_urls}
+                    thumbnails={selectedPostForViewer.thumbnails || undefined}
+                    title={selectedPostForViewer.title}
                     autoSlide={false}
                     showDots={true}
                     showArrows={true}
@@ -593,8 +596,8 @@ const LatestWork: React.FC<LatestWorkProps> = ({ limit = 6, showViewAll = true }
                 // Single image
                 <div className="w-full h-full flex items-center justify-center">
                   <img
-                    src={selectedImagePost.primary_media_url || selectedImagePost.media_url}
-                    alt={selectedImagePost.title}
+                    src={selectedPostForViewer.primary_media_url || selectedPostForViewer.media_url}
+                    alt={selectedPostForViewer.title}
                     className="max-w-full max-h-full object-contain"
                   />
                 </div>
@@ -606,34 +609,34 @@ const LatestWork: React.FC<LatestWorkProps> = ({ limit = 6, showViewAll = true }
               <div className="flex items-center space-x-6">
                 {/* Like Button */}
                 <button 
-                  onClick={() => handleLike(selectedImagePost.id)}
+                  onClick={() => handleLike(selectedPostForViewer.id)}
                   className={`flex items-center space-x-2 transition-colors ${
-                    selectedImagePost.user_has_liked 
+                    selectedPostForViewer.user_has_liked 
                       ? 'text-red-500 hover:text-red-400' 
                       : 'text-gray-300 hover:text-red-500'
                   }`}
                 >
                   <Heart 
-                    className={`h-5 w-5 ${selectedImagePost.user_has_liked ? 'fill-current' : ''}`} 
+                    className={`h-5 w-5 ${selectedPostForViewer.user_has_liked ? 'fill-current' : ''}`} 
                   />
-                  <span>{selectedImagePost.like_count || 0}</span>
+                  <span>{selectedPostForViewer.like_count || 0}</span>
                 </button>
 
                 {/* Comment Button */}
                 <button 
                   onClick={() => {
-                    closeImageModal();
-                    handleComment(selectedImagePost.id);
+                    closePostViewer();
+                    handleComment(selectedPostForViewer.id);
                   }}
                   className="flex items-center space-x-2 text-gray-300 hover:text-blue-400 transition-colors"
                 >
                   <MessageCircle className="h-5 w-5" />
-                  <span>{selectedImagePost.comment_count || 0}</span>
+                  <span>{selectedPostForViewer.comment_count || 0}</span>
                 </button>
 
                 {/* Share Button */}
                 <button 
-                  onClick={() => handleShare(selectedImagePost.id)}
+                  onClick={() => handleShare(selectedPostForViewer.id)}
                   className="flex items-center space-x-2 text-gray-300 hover:text-green-400 transition-colors"
                 >
                   <Share2 className="h-5 w-5" />

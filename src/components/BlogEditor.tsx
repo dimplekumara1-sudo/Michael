@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 interface BlogEditorProps {
   initialHtml?: string;
@@ -10,6 +10,12 @@ interface BlogEditorProps {
 const BlogEditor: React.FC<BlogEditorProps> = ({ initialHtml = '', onChange }) => {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [imageCount, setImageCount] = useState(0);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = initialHtml;
+    }
+  }, []); // Only run on mount
 
   const exec = (command: string, value?: string) => {
     document.execCommand(command, false, value);
@@ -53,9 +59,8 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ initialHtml = '', onChange }) =
         suppressContentEditableWarning
         className="min-h-[200px] border rounded p-3 bg-white"
         onInput={handleInput}
-        dangerouslySetInnerHTML={{ __html: initialHtml }}
       />
-      <p className="text-xs text-gray-500 mt-1">Tip: Select text and click "Add Link" to insert a clickable hyperlink.</p>
+      <p className="text-xs text-gray-500 mt-1">Tip: Select text and click \"Add Link\" to insert a clickable hyperlink.</p>
     </div>
   );
 };

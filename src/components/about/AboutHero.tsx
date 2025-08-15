@@ -18,7 +18,7 @@ const AboutHero: React.FC = () => {
           className="mb-4"
         >
           <h1 className="fresh-script-paintbrush text-6xl sm:text-8xl md:text-9xl lg:text-[12rem] bg-gradient-to-r from-white via-gray-300 to-white bg-clip-text text-transparent leading-none tracking-tight">
-            Micheal
+            MICHEAL
           </h1>
         </motion.div>
         

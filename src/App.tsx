@@ -15,7 +15,7 @@ import QRScannerPage from './pages/QRScannerPage';
 import ContactPage from './pages/ContactPage';
 import LatestWorkGallery from './pages/LatestWorkGallery';
 import AboutPage from './pages/AboutPage';
-
+import Footer from './components/Footer';
 import InputTestComponent from './components/InputTestComponent';
 import RegistrationTest from './pages/RegistrationTest';
 import BlogListPage from './pages/BlogListPage';
@@ -28,7 +28,7 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <Router>
-          <div className="min-h-screen bg-gray-50">
+          <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
             <Navbar />
             <Routes>
             <Route path="/" element={<HomePage />} />
@@ -101,6 +101,7 @@ function App() {
             <Route path="/input-test" element={<InputTestComponent />} />
             <Route path="/registration-test" element={<RegistrationTest />} />
           </Routes>
+          <Footer />
         </div>
       </Router>
       </ToastProvider>

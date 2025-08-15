@@ -590,16 +590,16 @@ const PostViewer: React.FC<PostViewerProps> = ({
           <div 
             key={post.id}
             ref={el => postRefs.current[index] = el}
-            className="min-h-screen w-full flex flex-col items-center justify-start p-0 md:p-4 snap-start"
+            className="min-h-screen w-full flex flex-col md:flex-row items-center justify-center p-4 md:p-8 snap-start gap-8"
           >
             {/* Media container */}
-            <div className="w-full md:w-7/12 lg:w-8/12 flex items-center justify-center p-2 md:p-4">
+            <div className="w-full md:w-7/12 lg:w-8/12 flex items-center justify-center">
               {post.youtube_url && isYouTubeUrl(post.youtube_url) ? (
                 <div className={`w-full ${isYouTubeShorts(post.youtube_url) ? 'aspect-[9/16] md:aspect-[9/16]' : 'aspect-video md:aspect-video'} bg-black rounded-none md:rounded-lg overflow-hidden md:shadow-2xl`}>
                   <div id={`yt-player-${post.id}`} className="w-full h-full" />
                 </div>
               ) : post.media_type === 'video' ? (
-                <div className="w-full max-h-[100vh] md:max-h-[70vh] bg-black rounded-none md:rounded-lg overflow-hidden md:shadow-2xl">
+                <div className="w-full h-auto md:h-[80vh] bg-black rounded-none md:rounded-lg overflow-hidden md:shadow-2xl">
                   <video
                     ref={(el) => (viewerVideoRefs.current[post.id] = el)}
                     src={post.primary_media_url || post.media_url}
@@ -624,7 +624,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
                   />
                 </div>
               ) : post.media_urls && post.media_urls.length > 1 ? (
-                <div className="w-full max-h-[100vh] md:max-h-[70vh] bg-black rounded-none md:rounded-lg overflow-hidden md:shadow-2xl">
+                <div className="w-full h-auto md:h-[80vh] bg-black rounded-none md:rounded-lg overflow-hidden md:shadow-2xl">
                   <MultiImageSlider
                     images={post.media_urls}
                     thumbnails={post.thumbnails || undefined}
@@ -641,14 +641,14 @@ const PostViewer: React.FC<PostViewerProps> = ({
                   <img
                     src={post.primary_media_url || post.media_url}
                     alt={post.title}
-                    className="w-full h-[100vh] md:h-auto md:max-h-[70vh] object-contain md:rounded-lg md:shadow-2xl"
+                    className="w-full h-full object-contain md:rounded-lg md:shadow-2xl"
                   />
                 </div>
               )}
             </div>
 
             {/* Post details */}
-            <div className="w-full md:w-5/12 lg:w-4/12 bg-white/10 backdrop-blur-md rounded-lg p-6 mt-4 md:mt-0 md:ml-4 text-white">
+            <div className="w-full md:w-5/12 lg:w-4/12 bg-white/10 backdrop-blur-md rounded-lg p-6 mt-4 md:mt-0 text-white">
               <h2 className="text-2xl font-bold mb-2">{post.title}</h2>
               
               {post.location && (

@@ -1,35 +1,77 @@
-
-import React from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Footer: React.FC = () => {
+  const { user, isAdmin } = useAuth();
   const location = useLocation();
-  const isContactPage = location.pathname === '/contact';
+  const [activeTab, setActiveTab] = useState(location.pathname);
+
+  useEffect(() => {
+    setActiveTab(location.pathname);
+  }, [location.pathname]);
+
+  const handleTabClick = (path: string) => {
+    setActiveTab(path);
+  };
+
+  const dashboardPath = isAdmin ? '/admin' : '/user/dashboard';
 
   return (
-    <footer className="mt-5 bg-gray-800 text-white py-6">
-      <div className="container mx-auto flex justify-center items-center">
-        <a href="https://www.instagram.com/micheal_photographs/" target="_blank" rel="noopener noreferrer" className="text-white mx-4">
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.791-4 4-4 4 1.79 4 4-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44 1.441-.645 1.441-1.44-.645-1.44-1.441-1.44z" />
-          </svg>
-        </a>
-        <a href="https://www.youtube.com/@michealphotographs7167" target="_blank" rel="noopener noreferrer" className="text-white mx-4">
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-          </svg>
-        </a>
-        <a href="mailto:admin@photography.com" className="text-white mx-4">
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M0 3v18h24v-18h-24zm21.518 2l-9.518 7.713-9.518-7.713h19.036zm-19.518 14v-11.817l10 8.104 10-8.104v11.817h-20z" />
-          </svg>
-        </a>
+    <footer className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 border-t border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 py-2 md:hidden z-50">
+      <div className="flex justify-around items-center px-2">
+        <Link to="/" onClick={() => handleTabClick('/')}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200 ${activeTab === '/' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-600 dark:text-gray-300'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span className={`text-sm whitespace-nowrap overflow-hidden transition-all duration-200 ${activeTab === '/' ? 'max-w-[8rem] opacity-100' : 'max-w-0 opacity-0'}`}>Home</span>
+          </div>
+        </Link>
+        <Link to="/latest-work" onClick={() => handleTabClick('/latest-work')}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200 ${activeTab === '/latest-work' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-600 dark:text-gray-300'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span className={`text-sm whitespace-nowrap overflow-hidden transition-all duration-200 ${activeTab === '/latest-work' ? 'max-w-[8rem] opacity-100' : 'max-w-0 opacity-0'}`}>Work</span>
+          </div>
+        </Link>
+        <Link to="/contact" onClick={() => handleTabClick('/contact')}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200 ${activeTab === '/contact' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-600 dark:text-gray-300'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className={`text-sm whitespace-nowrap overflow-hidden transition-all duration-200 ${activeTab === '/contact' ? 'max-w-[8rem] opacity-100' : 'max-w-0 opacity-0'}`}>Booking</span>
+          </div>
+        </Link>
+        <Link to="/blog" onClick={() => handleTabClick('/blog')}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200 ${activeTab === '/blog' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-600 dark:text-gray-300'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3h2m-4 3h2m-4 3h2m-4 3h2" />
+            </svg>
+            <span className={`text-sm whitespace-nowrap overflow-hidden transition-all duration-200 ${activeTab === '/blog' ? 'max-w-[8rem] opacity-100' : 'max-w-0 opacity-0'}`}>Blogs</span>
+          </div>
+        </Link>
+        {user ? (
+          <Link to={dashboardPath} onClick={() => handleTabClick(dashboardPath)}>
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200 ${(activeTab.startsWith('/admin') || activeTab.startsWith('/user/dashboard')) ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-600 dark:text-gray-300'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className={`text-sm whitespace-nowrap overflow-hidden transition-all duration-200 ${(activeTab.startsWith('/admin') || activeTab.startsWith('/user/dashboard')) ? 'max-w-[8rem] opacity-100' : 'max-w-0 opacity-0'}`}>Dashboard</span>
+            </div>
+          </Link>
+        ) : (
+          <Link to="/login" onClick={() => handleTabClick('/login')}>
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-200 ${activeTab === '/login' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-600 dark:text-gray-300'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className={`text-sm whitespace-nowrap overflow-hidden transition-all duration-200 ${activeTab === '/login' ? 'max-w-[8rem] opacity-100' : 'max-w-0 opacity-0'}`}>Login / Signup</span>
+            </div>
+          </Link>
+        )}
       </div>
-      {isContactPage && (
-        <div className="container mx-auto flex justify-center items-center mt-4">
-          <p style={{ fontSize: '12px' }}>Made by <span className="font-bold"><a href="https://in.linkedin.com/in/yuva-subharam-vasamsetti-75a39117a/" target="_blank" rel="noopener noreferrer">Yuva Subharam</a></span></p>
-        </div>
-      )}
     </footer>
   );
 };

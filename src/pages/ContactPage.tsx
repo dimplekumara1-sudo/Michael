@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Phone, MapPin, Clock, Send, Camera, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
+import { useAuth } from '../contexts/AuthContext';
 import Footer from '../components/Footer';
 
 interface ContactForm {
@@ -21,6 +23,8 @@ const ContactPage = () => {
   const [submitMessage, setSubmitMessage] = useState('');
   const [token, setToken] = useState<string | null>(null);
   const captchaRef = useRef<HCaptcha>(null);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const onSubmit = async (data: ContactForm) => {
     setIsSubmitting(true);
@@ -61,15 +65,21 @@ ${data.message}`;
       } else {
         console.log('✅ Contact form submitted successfully');
         setSubmitStatus('success');
-        setSubmitMessage('Thank you for your message! We\'ll get back to you within 24 hours.');
         reset();
         captchaRef.current?.resetCaptcha();
-        
-        // Clear success message after 5 seconds
-        setTimeout(() => {
-          setSubmitStatus('idle');
-          setSubmitMessage('');
-        }, 5000);
+
+        if (!user) {
+          setSubmitMessage('Thank you! We will get back to you soon. Redirecting you to create an account...');
+          setTimeout(() => {
+            navigate('/register');
+          }, 3000);
+        } else {
+          setSubmitMessage('Thank you for your message! We\'ll get back to you within 24 hours.');
+          setTimeout(() => {
+            setSubmitStatus('idle');
+            setSubmitMessage('');
+          }, 5000);
+        }
       }
     } catch (error) {
       console.error('Unexpected error submitting contact form:', error);
@@ -104,7 +114,7 @@ ${data.message}`;
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Phone</h3>
-                    <p className="text-gray-600">+91 (960) 305-1089</p>
+                    <p className="text-gray-600">+91 96030-51089</p>
                     <p className="text-sm text-gray-500">Available Mon-Fri, 9AM-6PM</p>
                   </div>
                 </div>
@@ -115,7 +125,7 @@ ${data.message}`;
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Email</h3>
-                    <p className="text-gray-600">hello@eventsnap.com</p>
+                    <p className="text-gray-600">hello@michealphotography.com</p>
                     <p className="text-sm text-gray-500">We respond within 24 hours</p>
                   </div>
                 </div>

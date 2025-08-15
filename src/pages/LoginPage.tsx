@@ -41,8 +41,8 @@ const LoginPage = () => {
       console.log('Login Result:', result);
       
       if (result.success) {
-        // Simple navigation - let the auth state change handle the redirect
-        const destination = data.email === 'admin@photography.com' ? '/admin' : '/dashboard';
+        // Use the isAdmin flag from the auth context for reliable redirection
+        const destination = isAdmin ? '/admin' : '/dashboard';
         console.log('Navigating to:', destination);
         
         // Add a small delay to ensure auth state is updated
@@ -185,14 +185,6 @@ const LoginPage = () => {
             </div>
           </form>
 
-          <div className="mt-6 border-t border-gray-200 pt-6">
-            <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg">
-              <p className="font-medium mb-2">Admin Access:</p>
-              <p>Email: admin@photography.com</p>
-              <p>Password: admin123</p>
-              <p className="mt-2 text-xs">New users can register for customer access</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

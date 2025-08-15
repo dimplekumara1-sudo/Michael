@@ -231,23 +231,23 @@ export class LatestWorkService {
   static async toggleLike(mediaPostId: string, userId: string): Promise<{ liked: boolean; likeCount: number }> {
     try {
       // Check if user already liked this post
-      const { data: existingLike, error: checkError } = await supabase
+      const { data: existingLikes, error: checkError } = await supabase
         .from('post_likes')
         .select('id')
         .eq('media_post_id', mediaPostId)
-        .eq('user_id', userId)
-        .single();
+        .eq('user_id', userId);
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
         throw checkError;
       }
 
-      if (existingLike) {
-        // Unlike the post
+      if (existingLikes && existingLikes.length > 0) {
+        // Unlike the post - delete all matching likes to be safe
         const { error: deleteError } = await supabase
           .from('post_likes')
           .delete()
-          .eq('id', existingLike.id);
+          .eq('media_post_id', mediaPostId)
+          .eq('user_id', userId);
 
         if (deleteError) throw deleteError;
 
@@ -646,14 +646,34 @@ export class LatestWorkService {
         
         let userHasLiked = false;
         if (userId) {
-          const { data: userLike } = await supabase
+          const { data: userLikes, error: likeError } = await supabase
             .from('post_likes')
             .select('id')
             .eq('media_post_id', post.id)
-            .eq('user_id', userId)
-            .single();
-          userHasLiked = !!userLike;
+            .eq('user_id', userId);
+
+          if (likeError) {
+            console.error(`Error checking user like for post ${post.id}:`, likeError);
+          } else {
+            userHasLiked = !!userLikes && userLikes.length > 0;
+          }
         }
+
+        // Helper function to get primary media URL
+        const getPrimaryMediaUrl = (post: any) => {
+          if (post.media_urls && post.media_urls.length > 0) {
+            return post.media_urls[0];
+          }
+          return post.media_url;
+        };
+
+        // Helper function to get primary thumbnail
+        const getPrimaryThumbnail = (post: any) => {
+          if (post.thumbnails && post.thumbnails.length > 0) {
+            return post.thumbnails[0];
+          }
+          return post.thumbnail;
+        };
 
         return {
           ...post,
