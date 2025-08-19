@@ -496,7 +496,7 @@ const UserDashboard = React.memo(() => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-gray-900">My Bookings</h2>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex flex-col items-end space-y-3 md:flex-row md:items-center md:space-y-0 md:space-x-4">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <input
@@ -505,22 +505,24 @@ const UserDashboard = React.memo(() => {
                         className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                    <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                      <Filter className="h-4 w-4" />
-                      <span>Filter</span>
-                    </button>
-                    <button 
-                      onClick={fetchUserBookings}
-                      disabled={loadingBookings}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {loadingBookings ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      ) : (
-                        <Calendar className="h-4 w-4" />
-                      )}
-                      <span>Refresh</span>
-                    </button>
+                    <div className="flex items-center space-x-4 md:space-x-4">
+                      <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        <Filter className="h-4 w-4" />
+                        <span>Filter</span>
+                      </button>
+                      <button 
+                        onClick={fetchUserBookings}
+                        disabled={loadingBookings}
+                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {loadingBookings ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                          <Calendar className="h-4 w-4" />
+                        )}
+                        <span>Refresh</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
